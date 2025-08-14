@@ -11,6 +11,12 @@ ResourceManager::ResourceManager()
 
 ResourceManager::~ResourceManager() = default;
 
+ResourceManager& ResourceManager::GetInstance()
+{
+    static ResourceManager manager;
+    return manager;
+}
+
 Expected<std::reference_wrapper<const Texture>> ResourceManager::loadTexture(std::string_view textureName, Path path)
 {
     std::string name = std::string(textureName);

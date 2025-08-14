@@ -9,9 +9,13 @@
 
 class ResourceManager
 {
-public:
+private:
     ResourceManager();
     ~ResourceManager();
+
+public:
+
+    static ResourceManager& GetInstance();
 
     Expected<std::reference_wrapper<const Texture>> loadTexture(std::string_view textureName, Path path);
     Expected<std::reference_wrapper<const Material>> createMaterial(std::string_view materialName, std::string_view textureName);
