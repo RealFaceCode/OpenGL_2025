@@ -1,4 +1,5 @@
-#include <concurrencysal.h>
+
+#include <cstdlib>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -6,18 +7,20 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <print>
 
+
 #include "buffers/vao.hpp"
 #include "buffers/vbo.hpp"
 #include "buffers/ebo.hpp"
 #include "buffers/ssbo.hpp"
-#include "buffers/texture.hpp"
 #include "buffers/vertex.hpp"
 #include "buffers/mesh.hpp"
+#include "defines.hpp"
 #include "glm/ext/matrix_transform.hpp"
+#include "glm/fwd.hpp"
 #include "glm/trigonometric.hpp"
 #include "shader.hpp"
-#include "util/fileio.hpp"
 #include "util/resourcemanager.hpp"
+#include "ecs/entitycomponentsystem.hpp"
 
 // Callback-Funktion für Fenstergrößenänderungen
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -32,10 +35,57 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
 }
 
+template<class Type>
+struct TransformComponent
+{
+    Type position;
+    glm::vec3 rotation;
+    glm::vec3 scale;
+};
 
+template<class Type>
+struct RenderableComponent
+{
+    Mesh<Type>& mesh;
+    Material& material;
+    bool render;
+};
+
+class TransformSystem2D : public ISystem
+{
+public:
+    void update(ComponentManager& cm, float deltaTime) override
+    {
+        for(auto [id, pos] : LazyViewWithEntity<TransformComponent<glm::vec2>>(cm))
+        {
+            std::println("ID: [{}, index: {}, generation: {}], Pos: [{}, {}]", id, getEntityIndex(id), getEntityGeneration(id),pos.position.x, pos.position.y);
+        }
+    }
+};
+
+class AppleEntityCreateSystem : public IEntityCreateSystem
+{
+public:
+    AppleEntityCreateSystem() = default;
+
+    void create(ComponentManager &cm, EntityID id, glm::vec2 pos, glm::vec3 rot, glm::vec3 scale)
+    {
+        cm.addComponent(id, TransformComponent<glm::vec2>{pos, rot, scale});
+    }
+};
 
 int main()
 {
+    EntityComponentSystem ecs;
+
+    ecs.addSystem<TransformSystem2D>();
+    ecs.addCreateSystem<AppleEntityCreateSystem>();
+    ecs.createEntity<AppleEntityCreateSystem>(glm::vec2{1,2}, glm::vec3{3,4,5}, glm::vec3{6,7,8});
+    auto id = ecs.createEntity<AppleEntityCreateSystem>(glm::vec2{2,3}, glm::vec3{3,4,5}, glm::vec3{6,7,8});
+    ecs.removeEntity(id);
+    ecs.createEntity<AppleEntityCreateSystem>(glm::vec2{3,4}, glm::vec3{3,4,5}, glm::vec3{6,7,8});
+    ecs.updateSystem<TransformSystem2D>(1);
+
     // GLFW initialisieren
     if (!glfwInit()) {
         std::println("Fehler beim Initialisieren von GLFW");
@@ -181,7 +231,7 @@ int main()
         processInput(window);
 
         // Rendern
-        glClearColor(0.2f, 0.0f, 0.3f, 1.0f);
+        glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         vao.bind();
